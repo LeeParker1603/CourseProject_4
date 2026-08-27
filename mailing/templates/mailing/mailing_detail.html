@@ -23,11 +23,13 @@
                 <p><strong>Тема письма:</strong> {{ mailing.message.subject }}</p>
                 <p><strong>Текст:</strong> {{ mailing.message.body|linebreaks }}</p>
 
-                <div class="d-grid gap-2 mt-4">
-                    <!-- Кнопку ручного запуска привяжем чуть позже на этапе логики отправки -->
-                    <a href="#" class="btn btn-primary">⚡ Запустить рассылку сейчас</a>
+                <form action="{% url 'mailing:mailing_trigger' mailing.pk %}" method="post" class="d-grid gap-2 mt-4">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary" {% if mailing.status == 'Завершена' %}disabled{% endif %}>
+                        ⚡ Запустить рассылку сейчас
+                    </button>
                     <a href="{% url 'mailing:mailing_list' %}" class="btn btn-outline-secondary">Назад к списку</a>
-                </div>
+                </form>
             </div>
         </div>
     </div>

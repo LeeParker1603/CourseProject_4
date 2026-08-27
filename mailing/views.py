@@ -1,8 +1,12 @@
 from django.urls import reverse_lazy
+from django.views import View
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from .models import Mailing, Client, Message
+from django.contrib import messages
 from .forms import MailingForm, ClientForm, MessageForm
+from .services import send_mailing_service
+
 
 # ==========================================
 # КОНТРОЛЛЕРЫ ДЛЯ УПРАВЛЕНИЯ РАССЫЛКАМИ
@@ -71,6 +75,41 @@ class MailingDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         # Удалять может только владелец
         obj = self.get_object()
         return obj.owner == self.request.user or self.request.user.is_superuser
+
+
+def get_object_or_404(Mailing, pk):
+    pass
+
+
+def redirect(param, pk):
+    pass
+
+
+class View:
+    pass
+
+
+class ManualMailingTriggerView(LoginRequiredMixin, View):
+    """Контроллер для обработки нажатия кнопки ручного запуска рассылки."""
+
+    def post(self, request, pk, *args, **kwargs):
+        mailing = get_object_or_404(Mailing, pk=pk)
+
+        # Проверяем права (запускать может только владелец или суперпользователь)
+        if mailing.owner != request.user and not request.user.is_superuser:
+            messages.error(request, "У вас нет прав для запуска этой рассылки.")
+            return redirect('mailing:mailing_detail', pk=pk)
+
+        # Вызываем наш почтовый сервис
+        result_message = send_mailing_service(mailing)
+
+        # Выводим пользователю системное уведомление на сайте о результате
+        if "Ошибка" in result_message:
+            messages.error(request, result_message)
+        else:
+            messages.success(request, result_message)
+
+        return redirect('mailing:mailing_detail', pk=pk)
 
 
 # ==========================================

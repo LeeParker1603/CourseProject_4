@@ -12,6 +12,18 @@
     <!-- Навигационная панель (Меню) -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
+            <!-- Блок всплывающих уведомлений -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
             <a class="navbar-brand" href="{% url 'mailing:mailing_list' %}">📬 MailingService</a>
             <div class="navbar-nav me-auto">
                 <a class="nav-link" href="{% url 'mailing:mailing_list' %}">Рассылки</a>
