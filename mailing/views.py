@@ -1,4 +1,5 @@
 from django.urls import reverse_lazy
+from django.shortcuts import get_object_or_404, redirect
 from django.views import View
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -77,33 +78,18 @@ class MailingDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return obj.owner == self.request.user or self.request.user.is_superuser
 
 
-def get_object_or_404(Mailing, pk):
-    pass
-
-
-def redirect(param, pk):
-    pass
-
-
-class View:
-    pass
-
-
 class ManualMailingTriggerView(LoginRequiredMixin, View):
     """Контроллер для обработки нажатия кнопки ручного запуска рассылки."""
 
     def post(self, request, pk, *args, **kwargs):
         mailing = get_object_or_404(Mailing, pk=pk)
 
-        # Проверяем права (запускать может только владелец или суперпользователь)
         if mailing.owner != request.user and not request.user.is_superuser:
             messages.error(request, "У вас нет прав для запуска этой рассылки.")
             return redirect('mailing:mailing_detail', pk=pk)
 
-        # Вызываем наш почтовый сервис
         result_message = send_mailing_service(mailing)
 
-        # Выводим пользователю системное уведомление на сайте о результате
         if "Ошибка" in result_message:
             messages.error(request, result_message)
         else:
@@ -151,4 +137,53 @@ class ClientDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     success_url = reverse_lazy('mailing:client_list')
 
     def test_func(self):
+        return self.get_object().owner == self.request.user or self.request.user.is_superuser
+
+
+# ==========================================
+# КОНТРОЛЛЕРЫ ДЛЯ УПРАВЛЕНИЯ СООБЩЕНИЯМИ
+# ==========================================
+
+class MessageListView(LoginRequiredMixin, ListView):
+    model = Message
+    template_name = 'mailing/message_list.html'
+    context_object_name = 'messages'
+
+    def get_queryset(self):
+        # Обычный пользователь видит свои сообщения, менеджер/админ — все
+        if self.request.user.groups.filter(name='Менеджеры').exists() or self.request.user.is_superuser:
+            return Message.objects.all()
+        return Message.objects.filter(owner=self.request.user)
+
+
+class MessageCreateView(LoginRequiredMixin, CreateView):
+    model = Message
+    form_class = MessageForm
+    template_name = 'mailing/message_form.html'
+    success_url = reverse_lazy('mailing:message_list')  # Мы создадим этот URL на следующем шаге
+
+    def form_valid(self, form):
+        # Привязываем сообщение к текущему авторизованному пользователю
+        form.instance.owner = self.request.user
+        return super().form_valid(form)
+
+
+class MessageUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Message
+    form_class = MessageForm
+    template_name = 'mailing/message_form.html'
+    success_url = reverse_lazy('mailing:message_list')
+
+    def test_func(self):
+        # Редактировать может только владелец
+        return self.get_object().owner == self.request.user or self.request.user.is_superuser
+
+
+class MessageDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Message
+    template_name = 'mailing/message_confirm_delete.html'
+    success_url = reverse_lazy('mailing:message_list')
+
+    def test_func(self):
+        # Удалять может только владелец
         return self.get_object().owner == self.request.user or self.request.user.is_superuser

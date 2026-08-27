@@ -147,3 +147,10 @@ MAILERS = {
 DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Куда перенаправлять после успешного входа
+LOGIN_REDIRECT_URL = 'mailing:mailing_list'
+# Куда перенаправлять после выхода из аккаунта
+LOGOUT_REDIRECT_URL = 'users:login'
+# Страница, куда перекинет пользователя, если он не авторизован, но пытается зайти на закрытую страницу
+LOGIN_URL = 'users:login'

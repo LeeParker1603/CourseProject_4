@@ -28,17 +28,18 @@
             <div class="navbar-nav me-auto">
                 <a class="nav-link" href="{% url 'mailing:mailing_list' %}">Рассылки</a>
                 <a class="nav-link" href="{% url 'mailing:client_list' %}">Клиенты</a>
+                <a class="nav-link" href="{% url 'mailing:message_list' %}">Сообщения</a>
             </div>
             <div class="navbar-nav">
                 {% if user.is_authenticated %}
                     <span class="navbar-text me-3">Вы вошли как: <strong>{{ user.email }}</strong></span>
-                    <form action="#" method="post" class="d-inline">
+                    <form action="{% url 'users:logout' %}" method="post" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-outline-light btn-sm">Выйти</button>
                     </form>
                 {% else %}
-                    <a class="btn btn-outline-light btn-sm me-2" href="#">Войти</a>
-                    <a class="btn btn-primary btn-sm" href="#">Регистрация</a>
+                    <a class="btn btn-outline-light btn-sm me-2" href="{% url 'users:login' %}">Войти</a>
+                    <a class="btn btn-primary btn-sm" href="{% url 'users:register' %}">Регистрация</a>
                 {% endif %}
             </div>
         </div>
