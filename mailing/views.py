@@ -1,7 +1,7 @@
 from django.urls import reverse_lazy
 from django.shortcuts import get_object_or_404, redirect
 from django.views import View
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from .models import Mailing, Client, Message
 from django.contrib import messages
@@ -187,3 +187,23 @@ class MessageDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     def test_func(self):
         # Удалять может только владелец
         return self.get_object().owner == self.request.user or self.request.user.is_superuser
+
+
+class HomeTemplateView(TemplateView):
+    """Контроллер главной страницы приложения, собирающий статистику по ТЗ."""
+    template_name = 'mailing/home.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        # 1. Общее количество всех созданных рассылок
+        context['total_mailings'] = Mailing.objects.count()
+
+        # 2. Количество активных рассылок (статус 'Запущена')
+        context['active_mailings'] = Mailing.objects.filter(status='Запущена').count()
+
+        # 3. Количество уникальных получателей (общее число клиентов в системе)
+        context['unique_clients'] = Client.objects.values('email').distinct().count()
+
+        return context
+
