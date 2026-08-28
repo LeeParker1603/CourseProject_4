@@ -1,18 +1,21 @@
+from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
-from django.conf import settings
-from .models import Mailing, MailingAttempt
+
+from .models import MailingAttempt
 
 
 def send_mailing_service(mailing):
-    """Логика обработки и отправки писем с сохранением логов через batch."""
-    now = timezone.now()
+    """Логика обработки и отправки писем без привязки к часовым поясам."""
+    # При USE_TZ=False этот метод выдаст чистое локальное время компьютера
+    current_time = timezone.now()
 
     if not mailing.is_active:
         return "Рассылка отключена администрацией."
 
-    if not (mailing.start_time <= now <= mailing.end_time):
-        return "Ошибка: Текущее время не входит в диапазон разрешенного времени отправки."
+    # Проверка диапазона времени
+    if not (mailing.start_time <= current_time <= mailing.end_time):
+        return f"Ошибка: Текущее время {current_time.strftime('%H:%M')} не входит в диапазон разрешенного времени отправки."
 
     mailing.update_status()
 
@@ -22,8 +25,6 @@ def send_mailing_service(mailing):
 
     success_count = 0
     errors_count = 0
-
-    # Список для batch-накопления объектов перед сохранением в БД
     attempts_to_create = []
 
     for client_email in recipients_emails:
@@ -36,26 +37,23 @@ def send_mailing_service(mailing):
                 fail_silently=False,
             )
             success_count += 1
-
-            # Вместо .create() просто добавляем объект в список (в оперативную память)
             attempts_to_create.append(
                 MailingAttempt(
-                    status='Успешно',
-                    server_response='Письмо успешно отправлено.',
-                    mailing=mailing
+                    status="Успешно",
+                    server_response="Письмо успешно отправлено.",
+                    mailing=mailing,
                 )
             )
         except Exception as e:
             errors_count += 1
             attempts_to_create.append(
                 MailingAttempt(
-                    status='Не успешно',
+                    status="Не успешно",
                     server_response=f"Ошибка отправки: {str(e)}",
-                    mailing=mailing
+                    mailing=mailing,
                 )
             )
 
-    # Выполняем БАТЧ-сохранение (один запрос в PostgreSQL вместо десятков)
     if attempts_to_create:
         MailingAttempt.objects.bulk_create(attempts_to_create)
 

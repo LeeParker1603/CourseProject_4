@@ -12,9 +12,8 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
-
-
 # 1. ГЛОБАЛЬНЫЙ ПАТЧ: Отключаем RESP3/HELLO и уведомления об обслуживании для старого Redis на Windows
 from redis.connection import Connection
 
@@ -23,23 +22,27 @@ Connection._configure_maintenance_notifications = lambda *args, **kwargs: None
 
 # Перехватываем инициализацию соединения и принудительно задаем протокол RESP2
 original_init = Connection.__init__
+
+
 def patched_init(self, *args, **kwargs):
-    kwargs['protocol'] = 2  # Блокирует команду HELLO
+    kwargs["protocol"] = 2  # Блокирует команду HELLO
     original_init(self, *args, **kwargs)
+
+
 Connection.__init__ = patched_init
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Загружаем переменные из .env
-load_dotenv(BASE_DIR / '.env')
+load_dotenv(BASE_DIR / ".env")
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
 
-SECRET_KEY = os.getenv('SECRET_KEY')
-DEBUG = os.getenv('DEBUG') == 'True'
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
+SECRET_KEY = os.getenv("SECRET_KEY")
+DEBUG = os.getenv("DEBUG") == "True"
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",")
 
 
 # Application definition
@@ -51,15 +54,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     # Наши приложения
-    'mailing.apps.MailingConfig',
-    'users.apps.UsersConfig',
+    "mailing.apps.MailingConfig",
+    "users.apps.UsersConfig",
 ]
 
 
 # Указываем Django использовать нашу кастомную модель пользователя (подготовим её сразу)
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = "users.User"
 
 
 MIDDLEWARE = [
@@ -96,15 +98,15 @@ WSGI_APPLICATION = "config.wsgi.application"
 # https://docs.djangoproject.com/en/6.1/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST'),
-        'PORT': os.getenv('DB_PORT'),
-        'OPTIONS': {
-            'client_encoding': 'UTF8',  # Принудительно устанавливаем UTF-8 для клиента
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT"),
+        "OPTIONS": {
+            "client_encoding": "UTF8",  # Принудительно устанавливаем UTF-8 для клиента
         },
     }
 }
@@ -132,10 +134,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 
-LANGUAGE_CODE = 'ru-ru'
-TIME_ZONE = 'Europe/Moscow'
+LANGUAGE_CODE = "ru-ru"
+TIME_ZONE = "Europe/Moscow"
 USE_I18N = True
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -143,9 +145,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-STATICFILES_DIRS = [
-    BASE_DIR / 'static'
-]
+STATICFILES_DIRS = [BASE_DIR / "static"]
 
 # Email
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
@@ -153,24 +153,33 @@ STATICFILES_DIRS = [
 MAILERS = {
     "default": {
         "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
-        "HOST": os.getenv('EMAIL_HOST'),
-        "PORT": int(os.getenv('EMAIL_PORT', 465)),
-        "USER": os.getenv('EMAIL_HOST_USER'),
-        "PASSWORD": os.getenv('EMAIL_HOST_PASSWORD'),
-        "USE_SSL": os.getenv('EMAIL_USE_SSL') == 'True',
+        "OPTIONS": {
+            "host": os.getenv("EMAIL_HOST"),
+            "port": (
+                int(os.getenv("EMAIL_PORT", 465)) if os.getenv("EMAIL_PORT") else 465
+            ),
+            "username": os.getenv("EMAIL_HOST_USER"),
+            "password": os.getenv("EMAIL_HOST_PASSWORD"),
+            "use_ssl": os.getenv("EMAIL_USE_SSL") == "True",
+        },
     }
 }
 
-DEFAULT_FROM_EMAIL = os.getenv('EMAIL_HOST_USER')
+# От чьего имени отправляются письма по умолчанию
+DEFAULT_FROM_EMAIL = os.getenv("EMAIL_HOST_USER")
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # Куда перенаправлять после успешного входа
-LOGIN_REDIRECT_URL = 'mailing:mailing_list'
+LOGIN_REDIRECT_URL = "mailing:mailing_list"
 # Куда перенаправлять после выхода из аккаунта
-LOGOUT_REDIRECT_URL = 'users:login'
+LOGOUT_REDIRECT_URL = "users:login"
 # Страница, куда перекинет пользователя, если он не авторизован, но пытается зайти на закрытую страницу
-LOGIN_URL = 'users:login'
+LOGIN_URL = "users:login"
+
+SESSION_COOKIE_AGE = 1209600  # 2 недели сессии
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
 
 CACHES = {
     "default": {
@@ -178,5 +187,3 @@ CACHES = {
         "LOCATION": "redis://127.0.0.1:6379/1",
     }
 }
-
-

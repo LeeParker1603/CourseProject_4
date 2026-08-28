@@ -1,4 +1,5 @@
 {% extends 'mailing/base.html' %}
+{% load user_tags %}
 
 {% block content %}
 <div class="row">
@@ -9,12 +10,16 @@
             </div>
             <div class="card-body">
                 <p><strong>Статус:</strong>
-                    {% if mailing.status == 'Создана' %}
-                        <span class="badge bg-secondary">Создана</span>
-                    {% elif mailing.status == 'Запущена' %}
-                        <span class="badge bg-primary">Запущена</span>
+                    {% if not mailing.is_active %}
+                        <span class="badge bg-danger">Отключена менеджером (Блокировка)</span>
                     {% else %}
-                        <span class="badge bg-success">Завершена</span>
+                        {% if mailing.status == 'Создана' %}
+                            <span class="badge bg-secondary">Создана</span>
+                        {% elif mailing.status == 'Запущена' %}
+                            <span class="badge bg-primary">Запущена</span>
+                        {% else %}
+                            <span class="badge bg-success">Завершена</span>
+                        {% endif %}
                     {% endif %}
                 </p>
                 <p><strong>Начало:</strong> {{ mailing.start_time|date:"d.m.Y H:i" }}</p>
@@ -23,13 +28,31 @@
                 <p><strong>Тема письма:</strong> {{ mailing.message.subject }}</p>
                 <p><strong>Текст:</strong> {{ mailing.message.body|linebreaks }}</p>
 
-                <form action="{% url 'mailing:mailing_trigger' mailing.pk %}" method="post" class="d-grid gap-2 mt-4">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-primary" {% if mailing.status == 'Завершена' %}disabled{% endif %}>
-                        ⚡ Запустить рассылку сейчас
-                    </button>
-                    <a href="{% url 'mailing:mailing_list' %}" class="btn btn-outline-secondary">Назад к списку</a>
-                </form>
+                <div class="d-grid gap-2 mt-4">
+                    <!-- Кнопка ручного запуска для владельца -->
+                    {% if mailing.owner == user or user.is_superuser %}
+                        <form action="{% url 'mailing:mailing_trigger' mailing.pk %}" method="post" class="d-grid gap-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary" {% if mailing.status == 'Завершена' or not mailing.is_active %}disabled{% endif %}>
+                                ⚡ Запустить рассылку сейчас
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <!-- ИСПРАВЛЕННАЯ КНОПКА ДЛЯ МЕНЕДЖЕРОВ: Используем наш новый фильтр has_group -->
+                    {% if user.is_superuser or user|has_group:'Менеджеры' %}
+                        <form action="{% url 'mailing:mailing_toggle_active' mailing.pk %}" method="post" class="d-grid gap-2 mt-2">
+                            {% csrf_token %}
+                            {% if mailing.is_active %}
+                                <button type="submit" class="btn btn-danger">🛑 Отключить рассылку</button>
+                            {% else %}
+                                <button type="submit" class="btn btn-success">✅ Включить рассылку</button>
+                            {% endif %}
+                        </form>
+                    {% endif %}
+
+                    <a href="{% url 'mailing:mailing_list' %}" class="btn btn-outline-secondary mt-2">Назад к списку</a>
+                </div>
             </div>
         </div>
     </div>

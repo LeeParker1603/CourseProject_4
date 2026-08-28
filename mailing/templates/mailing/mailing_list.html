@@ -26,19 +26,25 @@
                     <td>{{ mailing.start_time|date:"d.m.Y H:i" }}</td>
                     <td>{{ mailing.end_time|date:"d.m.Y H:i" }}</td>
                     <td>
-                        {% if mailing.status == 'Создана' %}
-                            <span class="badge bg-secondary">Создана</span>
-                        {% elif mailing.status == 'Запущена' %}
-                            <span class="badge bg-primary">Запущена</span>
+                        {% if not mailing.is_active %}
+                            <span class="badge bg-danger">Отключена менеджером</span>
                         {% else %}
-                            <span class="badge bg-success">Завершена</span>
+                            {% if mailing.status == 'Создана' %}
+                                <span class="badge bg-secondary">Создана</span>
+                            {% elif mailing.status == 'Запущена' %}
+                                <span class="badge bg-primary">Запущена</span>
+                            {% else %}
+                                <span class="badge bg-success">Завершена</span>
+                            {% endif %}
                         {% endif %}
                     </td>
                     <td>{{ mailing.message.subject }}</td>
                     <td class="text-end">
                         <a href="{% url 'mailing:mailing_detail' mailing.pk %}" class="btn btn-info btn-sm text-white">Смотреть</a>
-                        <a href="{% url 'mailing:mailing_update' mailing.pk %}" class="btn btn-warning btn-sm">Редактировать</a>
-                        <a href="{% url 'mailing:mailing_delete' mailing.pk %}" class="btn btn-danger btn-sm">Удалить</a>
+                        {% if mailing.owner == user or user.is_superuser %}
+                            <a href="{% url 'mailing:mailing_update' mailing.pk %}" class="btn btn-warning btn-sm">Редактировать</a>
+                            <a href="{% url 'mailing:mailing_delete' mailing.pk %}" class="btn btn-danger btn-sm">Удалить</a>
+                        {% endif %}
                     </td>
                 </tr>
                 {% empty %}

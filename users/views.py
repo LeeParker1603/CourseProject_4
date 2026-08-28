@@ -1,19 +1,21 @@
 import secrets
-from django.urls import reverse_lazy, reverse
-from django.shortcuts import redirect, get_object_or_404, render
-from django.views.generic import CreateView
+
+from django.conf import settings
 from django.contrib.auth.views import LoginView, LogoutView
 from django.core.mail import send_mail
-from django.conf import settings
-from .forms import UserRegisterForm, UserLoginForm
+from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse, reverse_lazy
+from django.views.generic import CreateView
+
+from .forms import UserLoginForm, UserRegisterForm
 from .models import User
 
 
 class RegisterView(CreateView):
     model = User
     form_class = UserRegisterForm
-    template_name = 'users/register.html'
-    success_url = reverse_lazy('users:login')
+    template_name = "users/register.html"
+    success_url = reverse_lazy("users:login")
 
     def form_valid(self, form):
         user = form.save(commit=False)
@@ -33,10 +35,10 @@ class RegisterView(CreateView):
             subject="Подтверждение регистрации на сервисе Рассылок",
             message=f"Для подтверждения вашей учетной записи перейдите по ссылке: {url}",
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email]
+            recipient_list=[user.email],
         )
 
-        return render(self.request, 'users/verify_message.html')
+        return render(self.request, "users/verify_message.html")
 
 
 def verify_email(request, token):
@@ -46,14 +48,13 @@ def verify_email(request, token):
     user.email_verified = True
     user.verification_token = None  # Стираем одноразовый токен
     user.save()
-    return render(request, 'users/verify_success.html')
+    return render(request, "users/verify_success.html")
 
 
 class UserLoginView(LoginView):
     form_class = UserLoginForm
-    template_name = 'users/login.html'
+    template_name = "users/login.html"
 
 
 class UserLogoutView(LogoutView):
     pass
-
