@@ -1,0 +1,8 @@
+{% extends 'mailing/base.html' %}
+{% block content %}
+<div class="alert alert-success text-center mt-5">
+    <h3>Поздравляем! Ваш Email успешно подтвержден!</h3>
+    <p>Теперь вы можете войти в систему под своими данными.</p>
+    <a href="{% url 'users:login' %}" class="btn btn-primary mt-3">Перейти ко входу</a>
+</div>
+{% endblock %}

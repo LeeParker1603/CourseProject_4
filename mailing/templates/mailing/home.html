@@ -1,0 +1,44 @@
+{% extends 'mailing/base.html' %}
+{% load cache %} <!-- Подгружаем тег кэширования Django -->
+
+{% block content %}
+<div class="p-5 mb-4 bg-light rounded-3 border shadow-sm">
+    <div class="container-fluid py-5 text-center">
+        <h1 class="display-5 fw-bold">Сервис управления рассылками</h1>
+        <p class="col-md-12 fs-4 text-muted">Удобный инструмент для информирования, прогрева и привлечения клиентов вашего бизнеса.</p>
+        {% if not user.is_authenticated %}
+            <a href="{% url 'users:register' %}" class="btn btn-success btn-lg px-4 mt-2">Начать использование</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Кэшируем блок со статистикой на 60 секунд -->
+{% cache 60 index_stats_block %}
+<div class="row text-center mt-5">
+    <div class="col-md-4 mb-4">
+        <div class="card border-primary h-100 shadow-sm">
+            <div class="card-body">
+                <h1 class="display-3 card-title text-primary fw-bold">{{ total_mailings }}</h1>
+                <p class="card-text fs-5 text-muted">Всего рассылок создано</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card border-success h-100 shadow-sm">
+            <div class="card-body">
+                <h1 class="display-3 card-title text-success fw-bold">{{ active_mailings }}</h1>
+                <p class="card-text fs-5 text-muted">Активных рассылок сейчас</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card border-dark h-100 shadow-sm">
+            <div class="card-body">
+                <h1 class="display-3 card-title text-dark fw-bold">{{ unique_clients }}</h1>
+                <p class="card-text fs-5 text-muted">Уникальных получателей в системе</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endcache %}
+{% endblock %}

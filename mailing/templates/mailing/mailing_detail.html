@@ -1,0 +1,109 @@
+{% extends 'mailing/base.html' %}
+{% load user_tags %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Параметры рассылки</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Статус:</strong>
+                    {% if not mailing.is_active %}
+                        <span class="badge bg-danger">Отключена менеджером (Блокировка)</span>
+                    {% else %}
+                        {% if mailing.status == 'Создана' %}
+                            <span class="badge bg-secondary">Создана</span>
+                        {% elif mailing.status == 'Запущена' %}
+                            <span class="badge bg-primary">Запущена</span>
+                        {% else %}
+                            <span class="badge bg-success">Завершена</span>
+                        {% endif %}
+                    {% endif %}
+                </p>
+                <p><strong>Начало:</strong> {{ mailing.start_time|date:"d.m.Y H:i" }}</p>
+                <p><strong>Окончание:</strong> {{ mailing.end_time|date:"d.m.Y H:i" }}</p>
+                <hr>
+                <p><strong>Тема письма:</strong> {{ mailing.message.subject }}</p>
+                <p><strong>Текст:</strong> {{ mailing.message.body|linebreaks }}</p>
+
+                <div class="d-grid gap-2 mt-4">
+                    <!-- Кнопка ручного запуска для владельца -->
+                    {% if mailing.owner == user or user.is_superuser %}
+                        <form action="{% url 'mailing:mailing_trigger' mailing.pk %}" method="post" class="d-grid gap-2">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary" {% if mailing.status == 'Завершена' or not mailing.is_active %}disabled{% endif %}>
+                                ⚡ Запустить рассылку сейчас
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <!-- ИСПРАВЛЕННАЯ КНОПКА ДЛЯ МЕНЕДЖЕРОВ: Используем наш новый фильтр has_group -->
+                    {% if user.is_superuser or user|has_group:'Менеджеры' %}
+                        <form action="{% url 'mailing:mailing_toggle_active' mailing.pk %}" method="post" class="d-grid gap-2 mt-2">
+                            {% csrf_token %}
+                            {% if mailing.is_active %}
+                                <button type="submit" class="btn btn-danger">🛑 Отключить рассылку</button>
+                            {% else %}
+                                <button type="submit" class="btn btn-success">✅ Включить рассылку</button>
+                            {% endif %}
+                        </form>
+                    {% endif %}
+
+                    <a href="{% url 'mailing:mailing_list' %}" class="btn btn-outline-secondary mt-2">Назад к списку</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">Список получателей ({{ mailing.recipients.count }})</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for recipient in mailing.recipients.all %}
+                    <li class="list-group-item">{{ recipient.full_name }} <span class="text-muted">({{ recipient.email }})</span></li>
+                {% empty %}
+                    <li class="list-group-item text-muted">Получатели не выбраны.</li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">История попыток отправки</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Время</th>
+                            <th>Статус</th>
+                            <th>Ответ сервера</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attempt in mailing.attempts.all %}
+                        <tr>
+                            <td>{{ attempt.attempt_time|date:"d.m.Y H:i:s" }}</td>
+                            <td>
+                                <span class="badge {% if attempt.status == 'Успешно' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ attempt.status }}
+                                </span>
+                            </td>
+                            <td>{{ attempt.server_response }}</td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted">Попыток отправки еще не зафиксировано.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

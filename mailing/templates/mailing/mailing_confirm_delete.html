@@ -1,0 +1,22 @@
+{% extends 'mailing/base.html' %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Подтверждение удаления</h5>
+            </div>
+            <div class="card-body text-center">
+                <p class="fs-5">Вы уверены, что хотите удалить рассылку <strong>ID: {{ object.id }}</strong>?</p>
+                <p class="text-muted small">Это действие нельзя будет отменить. Вся история попыток также будет удалена.</p>
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <a href="{% url 'mailing:mailing_list' %}" class="btn btn-secondary me-2">Отмена</a>
+                    <button type="submit" class="btn btn-danger">Да, удалить</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
