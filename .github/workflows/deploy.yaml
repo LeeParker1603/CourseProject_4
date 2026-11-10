@@ -73,9 +73,9 @@ jobs:
             cd /home/${{ secrets.SERVER_USER }}
             
             # Если проекта еще нет на сервере — клонируем, если есть — обновляем код
-            if [ ! -d "CourseProject_4/.git" ]; then
+            if [ -d "CourseProject_4" ] && [ ! -d "CourseProject_4/.git" ]; then
               rm -rf CourseProject_4
-              git clone https://github.com/LeeParker1603/CourseProject_4 .
+              git clone https://github.com/LeeParker1603/CourseProject_4
               cd CourseProject_4
               git checkout feature/course_project_5
             else
