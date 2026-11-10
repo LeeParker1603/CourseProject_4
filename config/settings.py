@@ -205,3 +205,7 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="*/5"),  # Каждые 5 минут
     },
 }
+
+csrf_trusted = os.getenv('CSRF_TRUSTED_ORIGINS')
+if csrf_trusted:
+    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_trusted.split(',')]
