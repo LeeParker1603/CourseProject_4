@@ -1,55 +1,65 @@
-name: CI/CD Pipeline
+name: Django Mailing Service CI/CD Pipeline
 
 on:
   push:
-    branches: [ "develop", "main", "feature/course_project_5" ]
+    branches: [ main, develop, feature/course_project_5 ]
+  pull_request:
+    branches: [ main, develop, feature/course_project_5 ]
 
 jobs:
-  lint-and-test:
+  # 1. Этап ТЕСТЫ
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-python: '3.12'
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Lint with flake8
+      - name: Run tests
+        env:
+          SECRET_KEY: 'test_secret_key_for_ci_pipeline'
+          DEBUG: 'True'
+          DB_NAME: 'test_db'
         run: |
-          # Остановит сборку, если есть синтаксические ошибки
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-
-      - name: Test with Django manage.py
-        run: |
-          # Подменяем переменные для тестов, чтобы не падало без БД
-          export SECRET_KEY="test_secret"
-          export DB_NAME="test_db"
           python manage.py test
 
-  build-images:
-    needs: lint-and-test
+  # 2. Этап ЛИНТЕР (запускается после успешных тестов)
+  lint:
     runs-on: ubuntu-latest
+    needs: test
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Build Docker Image (Check)
-        run: docker build -t mailing_service_web:latest .
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
 
-  deploy:
-    needs: build-images
+      - name: Install linter
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Run Flake8
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+
+  # 3. Этап БИЛД и АВТО-ДЕПЛОЙ
+  build_and_deploy:
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop' # Деплоим только при слиянии в develop
+    needs: [test, lint]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/feature/course_project_5' # Запуск деплоя при пуше в вашу рабочую ветку
     steps:
-      - name: Checkout code
+      - name: Check out code
         uses: actions/checkout@v4
 
       - name: Deploy to Remote Server via SSH
@@ -59,10 +69,54 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            # Переходим в рабочую папку проекта на сервере Yandex Cloud
+            mkdir -p /home/${{ secrets.SERVER_USER }}/CourseProject_4
             cd /home/${{ secrets.SERVER_USER }}/CourseProject_4
-            git pull origin develop
-            docker compose down
-            docker compose up --build -d
-            # Выполняем миграции внутри контейнера
-            docker compose exec -T web python manage.py migrate
+            
+            # Если проекта еще нет на сервере — клонируем, если есть — обновляем код
+            if [ ! -d ".git" ]; then
+              git clone https://github.com .
+              git checkout feature/course_project_5
+            else
+              git fetch --all
+              git checkout feature/course_project_5
+              git reset --hard origin/feature/course_project_5
+            fi
+
+            # Автоматическое формирование .env файла из GitHub Secrets на сервере
+            cat << 'EOF' > .env
+            SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}'
+            DEBUG=False
+            ALLOWED_HOSTS=158.160.132.249,localhost,127.0.0.1
+
+            # Подключение к PostgreSQL контейнеру
+            DB_HOST=db
+            DB_PORT=5432
+            DB_NAME=${{ secrets.DB_NAME }}
+            DB_USER=${{ secrets.DB_USER }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+            # Настройки для инициализации самого контейнера базы данных PostgreSQL
+            POSTGRES_DB=${{ secrets.DB_NAME }}
+            POSTGRES_USER=${{ secrets.DB_USER }}
+            POSTGRES_PASSWORD=${{ secrets.DB_PASSWORD }}
+
+            # Настройки брокера Redis и Celery
+            CELERY_BROKER_URL=redis://redis:6379/0
+            CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+            # Настройки Яндекс SMTP рассылок
+            EMAIL_HOST=smtp.yandex.ru
+            EMAIL_PORT=465
+            EMAIL_USE_SSL=True
+            EMAIL_HOST_USER=${{ secrets.EMAIL_HOST_USER }}
+            EMAIL_HOST_PASSWORD=${{ secrets.EMAIL_HOST_PASSWORD }}
+            EOF
+
+            # Перезапуск Docker-контейнеров одной командой с очисткой старых анонимных томов
+            docker compose down -v
+            docker compose up -d --build
+
+            # Применение миграций и создание кастомной группы менеджеров внутри запущенного контейнера Django
+            docker compose exec -T web python manage.py migrate --noinput
             docker compose exec -T web python manage.py create_manager_group
