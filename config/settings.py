@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from celery.schedules import crontab
 from dotenv import load_dotenv
 # 1. ГЛОБАЛЬНЫЙ ПАТЧ: Отключаем RESP3/HELLO и уведомления об обслуживании для старого Redis на Windows
 from redis.connection import Connection
@@ -178,19 +179,18 @@ CACHES = {
 
 
 # Настройки Celery
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://redis:6379/0')
-CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 
-# Настройка периодической задачи (замена run_mailings)
-from celery.schedules import crontab
+# Настройка периодической задачи
 
 CELERY_BEAT_SCHEDULE = {
-    'run_mailings_every_5_minutes': {
-        'task': 'mailing.tasks.execute_mailings',
-        'schedule': crontab(minute='*/5'),  # Каждые 5 минут
+    "run_mailings_every_5_minutes": {
+        "task": "mailing.tasks.execute_mailings",
+        "schedule": crontab(minute="*/5"),  # Каждые 5 минут
     },
 }
