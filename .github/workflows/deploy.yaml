@@ -70,14 +70,16 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             # Переходим в рабочую папку проекта на сервере Yandex Cloud
-            mkdir -p /home/${{ secrets.SERVER_USER }}/CourseProject_4
-            cd /home/${{ secrets.SERVER_USER }}/CourseProject_4
+            cd /home/${{ secrets.SERVER_USER }}
             
             # Если проекта еще нет на сервере — клонируем, если есть — обновляем код
-            if [ ! -d ".git" ]; then
+            if [ ! -d "CourseProject_4/.git" ]; then
+              rm -rf CourseProject_4
               git clone https://github.com/LeeParker1603/CourseProject_4 .
+              cd CourseProject_4
               git checkout feature/course_project_5
             else
+              cd CourseProject_4
               git fetch --all
               git checkout feature/course_project_5
               git reset --hard origin/feature/course_project_5
