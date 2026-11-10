@@ -75,7 +75,7 @@ jobs:
             
             # Если проекта еще нет на сервере — клонируем, если есть — обновляем код
             if [ ! -d ".git" ]; then
-              git clone https://github.com .
+              git clone https://github.com/LeeParker1603/CourseProject_4 .
               git checkout feature/course_project_5
             else
               git fetch --all
