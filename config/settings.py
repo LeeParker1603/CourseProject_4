@@ -4,6 +4,7 @@ from pathlib import Path
 
 from celery.schedules import crontab
 from dotenv import load_dotenv
+
 # 1. ГЛОБАЛЬНЫЙ ПАТЧ: Отключаем RESP3/HELLO и уведомления об обслуживании для старого Redis на Windows
 from redis.connection import Connection
 
@@ -44,7 +45,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "rest_framework",
     # Наши приложения
     "mailing.apps.MailingConfig",
     "users.apps.UsersConfig",
@@ -103,11 +103,11 @@ DATABASES = {
 }
 
 # Если запущен скрипт тестирования, подменяем БД на встроенную SQLite
-if 'test' in sys.argv:
+if "test" in sys.argv:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": ":memory:",
         }
     }
 
@@ -205,4 +205,3 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(minute="*/5"),  # Каждые 5 минут
     },
 }
-
