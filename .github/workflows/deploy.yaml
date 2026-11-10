@@ -88,7 +88,7 @@ jobs:
             cat << 'EOF' > .env
             SECRET_KEY='${{ secrets.DJANGO_SECRET_KEY }}'
             DEBUG=False
-            ALLOWED_HOSTS=158.160.132.249,localhost,127.0.0.1
+            ALLOWED_HOSTS=${{ secrets.ALLOWED_HOSTS }}
 
             # Подключение к PostgreSQL контейнеру
             DB_HOST=db
