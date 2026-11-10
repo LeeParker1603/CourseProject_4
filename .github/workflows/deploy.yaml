@@ -117,7 +117,17 @@ jobs:
             # Перезапуск Docker-контейнеров одной командой с очисткой старых анонимных томов
             docker compose down -v
             docker compose up -d --build
-
+            
+            echo "Ожидание запуска базы данных..."
+            for i in {1..30}; do
+              if docker compose exec -T db pg_isready -U "${{ secrets.DB_USER }}" -d "${{ secrets.DB_NAME }}"; then
+                echo "База данных готова к работе!"
+                break
+              fi
+              echo "База данных еще инициализируется, ждем 1 секунду..."
+              sleep 1
+            done
+            
             # Применение миграций и создание кастомной группы менеджеров внутри запущенного контейнера Django
             docker compose exec -T web python manage.py migrate --noinput
             docker compose exec -T web python manage.py create_manager_group
