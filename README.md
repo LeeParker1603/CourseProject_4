@@ -50,55 +50,75 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Настройка конфигурации `.env`
-Создайте в корне файл `.env` и укажите параметры подключения (используйте только латинские символы без пробелов):
-```text
-SECRET_KEY='django-insecure-ваша_секретная_строка'
+## 🛠 Локальный запуск проекта (через Docker)
+
+Для локального запуска вам понадобится только установленный **Docker Desktop**. Все зависимости, СУБД, брокер сообщений и фоновые задачи изолированы внутри контейнеров.
+
+### 1. Подготовка окружения
+Создайте файл `.env` в корневом каталоге проекта и заполните его локальными данными:
+```env
+SECRET_KEY='your_local_secret_key'
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
 
+# Подключение к БД внутри Docker-сети
+DB_HOST=db
+DB_PORT=5432
 DB_NAME=mailing_db
 DB_USER=postgres
-DB_PASSWORD=ваш_пароль_postgres
-DB_HOST=127.0.0.1
-DB_PORT=5432
+DB_PASSWORD=your_secure_password
 
+# Настройки для автоматического считывания контейнером PostgreSQL при старте
+POSTGRES_DB=mailing_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_secure_password
+
+# Настройки Celery и Redis
+CELERY_BROKER_URL=redis://redis:6379/0
+CELERY_RESULT_BACKEND=redis://redis:6379/0
+
+# Настройки отправки писем (SMTP Яндекс)
 EMAIL_HOST=smtp.yandex.ru
 EMAIL_PORT=465
-EMAIL_HOST_USER=ваша_почта@yandex.ru
-EMAIL_HOST_PASSWORD=ваш_16_значный_пароль_приложения_яндекс
 EMAIL_USE_SSL=True
+EMAIL_HOST_USER=your_email@yandex.ru
+EMAIL_HOST_PASSWORD=your_app_password
 ```
-*Примечание: в настройках вашей Яндекс.Почты во вкладке «Почтовые программы» должна быть обязательно включена галочка доступа по протоколу IMAP/SMTP.*
 
-### 3. Развертывание таблиц в PostgreSQL
-Перед запуском создайте пустую базу данных с именем `mailing_db` в pgAdmin.
+### 2. Запуск контейнеров
+Запустите все сервисы (Django, PostgreSQL, Redis, Celery, Celery Beat, Nginx) одной командой:
 ```bash
-python manage.py makemigrations users
-python manage.py makemigrations mailing
-python manage.py migrate
+docker compose up -d --build
 ```
 
-### 4. Создание системных ролей и Администратора
+### 3. Инициализация базы данных
+В новом окне терминала выполните команды миграции, создания кастомной группы менеджеров и суперпользователя внутри работающего контейнера Django:
 ```bash
-# Автоматическое создание группы Менеджеры и привязка прав доступа из ТЗ
-python manage.py create_manager_group
-
-# Создание Суперпользователя (вход будет по Email)
-python manage.py createsuperuser
+docker compose exec web python manage.py migrate --noinput
+docker compose exec web python manage.py create_manager_group
+docker compose exec web python manage.py createsuperuser
 ```
+Приложение локально будет доступно по адресу: `http://localhost`.
 
-### 5. Старт серверов
-Убедитесь, что сервер Redis запущен на порту 6379, после чего запустите Django:
-```bash
-python manage.py runserver
-```
-Проект откроется по адресу: [http://127.0.0](http://127.0.0)
+---
 
-## Работа планировщика (Автоматический запуск)
+## 🚀 Настройка CI/CD и автоматического деплоя
 
-Для полной автоматизации процесса отправки рассылок без участия пользователя, раз в 5-15 минут должен выполняться фоновый консольный скрипт:
-```bash
-python manage.py run_mailings
-```
-Данный скрипт сверяет текущее время с заложенными интервалами в базе данных PostgreSQL и осуществляет массовую отправку писем по актуальным триггерам.
+В репозитории развернут автоматический пайплайн конфигурации GitHub Actions (`.github/workflows/deploy.yaml`).
+
+### Как устроен рабочий процесс (Pipeline):
+1. **Тестирование (`test`):** При каждом пуше или создании PR запускаются Django-тесты в изолированном окружении.
+2. **Линтинг (`lint`):** После успешных тестов код проверяется линтером `flake8` на соответствие стандартам PEP 8.
+3. **Автоматический деплой (`build_and_deploy`):** Запускается только при успешном прохождении тестов и линтера при событии `push` в рабочую ветку. Конвейер подключается к серверу Yandex Cloud по SSH, обновляет код, **полностью перезаписывает и формирует актуальный файл `.env` на основе GitHub Secrets** и перезапускает контейнеры.
+
+
+### Настройка GitHub Secrets
+Для работы автоматического формирования `.env` и деплоя на сервере, в настройках репозитория на GitHub (**Settings -> Secrets and variables -> Actions**) добавлены следующие секреты:
+* `SERVER_HOST` — IP-адрес вашей виртуальной машины в Yandex Cloud.
+* `SERVER_USER` — имя пользователя для подключения по SSH (например, `ubuntu`).
+* `SSH_PRIVATE_KEY` — приватный SSH-ключ для авторизации на сервере.
+* `DJANGO_SECRET_KEY` — секретный ключ для продакшен-настроек Django.
+* `DB_NAME` / `DB_USER` / `DB_PASSWORD` — учётные данные для вашей базы данных PostgreSQL.
+* `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` — данные почтового ящика Яндекса для отправки рассылок.
+
+---
