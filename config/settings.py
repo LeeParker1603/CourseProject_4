@@ -186,7 +186,7 @@ SESSION_SAVE_EVERY_REQUEST = True
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": os.getenv("CELERY_BROKER_URL", "redis://redis:6379/1"),
     }
 }
 

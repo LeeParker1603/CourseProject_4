@@ -36,14 +36,14 @@ class MailingListView(LoginRequiredMixin, ListView):
         return Mailing.objects.filter(owner=user)
 
 
-class MailingDetailView(LoginRequiredMixin, DetailView):
+class MailingDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Mailing
     template_name = "mailing/mailing_detail.html"
     context_object_name = "mailing"
 
     def get_object(self, queryset=None):
         """Вызывается при открытии страницы рассылки. Пересчитывает её статус."""
-        cache.clear()
+        # cache.clear()
 
         obj = super().get_object(queryset)
         obj.update_status()  # Вызов динамического пересчета и сохранения из модели
